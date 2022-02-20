@@ -1,15 +1,3 @@
-/*
- * Copyright (c) 2012-2020 Snowplow Analytics Ltd. All rights reserved.
- *
- * This program is licensed to you under the Apache License Version 2.0,
- * and you may not use this file except in compliance with the Apache License Version 2.0.
- * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the Apache License Version 2.0 is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
- */
 package me.chuwy.otusfp
 
 import org.specs2.mutable.Specification
@@ -22,14 +10,55 @@ import cats.implicits._
 import cats.effect.IO
 
 class ErrorSpec extends Specification with CatsEffect {
+  type MyMonad[F[_]] = MonadError[F, Unit]
+  type MyError[A] = Either[Unit, A]
+
   "Either" should {
     "can short-circuit" in {
+      val s = for {
+        a <- State { (s: Int) => (s + 1, s) }
+        b <- State { (s: Int) => (s + 1, s) }
+        c <- State { (s: Int) => (s + 1, s) }
+        d <- State { (s: Int) => (s + 1, s) }
+      } yield a + b + c + d
+
+      val o = for {
+        a <- Some(3)
+        b <- Some(3)
+        c <- None
+        d <- Some(3)
+      } yield a + b + c + d
+
+      // Option
+
+      def withError[F[_]: MyMonad]: F[Int] =
+        for {
+          a <- MonadError[F, Unit].pure(42)
+          b <- MonadError[F, Unit].pure(42)
+          d <- MonadError[F, Unit].raiseError[Int](())
+          c <- MonadError[F, Unit].pure(42)
+        } yield a + b + c
+
+      withError[Option] should beSome
+    }
+  }
+
+  "MonadError" should {
+    "provide error handling" in {
+      def withHandling[F[_]: MyMonad] = {
+        val value: F[String] = MonadError[F, Unit].raiseError(())
+//        value.attempt must beLeft
+
+      }
       ok
     }
   }
 
-  "Option" should {
-    "be able to short-circuit" in {
+  "IO" should {
+    "be a MonadError" in {
+      val a = IO.raiseError(new RuntimeException("Boom!"))
+
+      a.attempt *> IO.println("Hello, World!")
       ok
     }
   }

@@ -9,17 +9,20 @@ import org.specs2.mutable.Specification
 import cats.effect.testing.specs2.CatsEffect
 import cats.implicits._
 
-import cats.effect.{MonadCancel, IO, Async, Sync}
+import cats.effect.{Async, MonadCancel, Clock, IO, Sync}
 import cats.effect.implicits._
-import cats.effect.kernel.Concurrent
+import cats.effect.kernel.{Concurrent, Unique}
+import cats.effect.std.Random
 
 class SyncSpec extends Specification with CatsEffect {
   "apply" should {
     "suspend" in {
-      val a: IO[Unit] = IO {
-        println("Hello")
-        println("World")
-      }
+      def test[F[_]: Sync] =
+        Sync[F].delay(println("Boom!"))
+
+      val a = test[IO]
+
+      Async[IO].async_()
 
       ok
     }
